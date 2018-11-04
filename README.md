@@ -18,7 +18,7 @@ Our ultimate goal is to team with partners and write a 2-of-3 multisignature tra
 	2. mnemonic >> POST:api/Wallet/Create 
 	3. POST:api/Wallet/account
 	4. GET:api/Wallet/unusedaddress
-* Mine 98mil to my address:SfgvvZrp4fq2xHrUVWExY9wF6XY9pAf6gM. Make sure I have enough UTXOs past the POW era
+* Mine 98mil to my address:TRbJSTpYvK1dDes3EACYxKx9jXeF7cjufY. Make sure I have enough UTXOs past the POW era
 * Run sufficientr network infrastructure to supoort AT LEAST 50 nodes on the network. We will probably have more like 100 on the real deal
 
 ## Prequisites
@@ -59,4 +59,5 @@ Sat Nov  3 12:22:17 2018
 We're at Tufts. I really doubt we will be able to get long work going but I may be able to generate addresses and make incremental changes to my product.
 
 
-
+Sat Nov  3 23:30:50 2018
+Just realize I need to get rid of Checkpoints because otherwise we can't get valid blocks. Still not sure how to generate Genesis....
