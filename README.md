@@ -1,5 +1,5 @@
 # Building Blocks
-######BostonHacks 2018 Stratis x FinTechBU Workshop: Writing a Transaction
+###### BostonHacks 2018 Stratis x FinTechBU Workshop: Writing a Transaction
 #### Writing directly to chain
 
 
@@ -15,22 +15,28 @@ Huge thanks to everyone who contributed to [Programming the Blockchain in C#](ht
 
 # Let's get started
 
-If you want to use .NET Core, first install .NET Core [as documented here](https://www.microsoft.com/net/core#windowsvs2017).
+Who's familiar with `Terminal`? 
 
-Then:
+[Install .NET Core as documented here](https://www.microsoft.com/net/core#windowsvs2017).
+[Install VSCode](https://code.visualstudio.com/download), or use Visual Studio, or your favorite text editor
+
+# Create a new project
+
+Enter the following commands in your command line:
+```console
+$ mkdir MyProject
+$ cd MyProject
+$ dotnet new console
+$ dotnet add package NBitcoin
+$ dan$ dotnet restore
 ```
-mkdir MyProject
-cd MyProject
-dotnet new console
-dotnet add package NBitcoin
-dotnet restore
-```
-Then edit your Program.cs:
-```
+
+Then edit Program.cs:
+```csharp
 using System;
 using NBitcoin;
 
-namespace _125350929
+namespace
 {
     class Program
     {
@@ -41,8 +47,8 @@ namespace _125350929
     }
 }
 ```
-You can then run with
-```
+Run it in console:
+```console
 dotnet run
 ```
 
@@ -130,3 +136,6 @@ Just realize I need to get rid of Checkpoints because otherwise we can't get val
 Sun Nov  4 00:21:46 2018
 Refuled - updated network rules by replacing timestamp, removing checkpoints, null assumeDefault
 
+
+Sun Nov  4 13:59:29 2018
+People are totally capable of following the tut. Needs to be more comprehensive.
