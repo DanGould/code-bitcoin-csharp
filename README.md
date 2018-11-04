@@ -46,6 +46,35 @@ You can then run with
 dotnet run
 ```
 
+(MultiSig Book Tut)[https://programmingblockchain.gitbook.io/programmingblockchain/other_types_of_ownership/multi_sig]
+
+```
+BroadcastResponse broadcastResponse = client.Broadcast(transaction).Result;
+
+if (!broadcastResponse.Success)
+{
+    Console.Error.WriteLine("ErrorCode: " + broadcastResponse.Error.ErrorCode);
+    Console.Error.WriteLine("Error message: " + broadcastResponse.Error.Reason);
+}
+else
+{
+    Console.WriteLine("Success! You can check out the hash of the transaciton in any block explorer:");
+    Console.WriteLine(transaction.GetHash());
+}
+```
+*OR*
+```
+using (var node = Node.ConnectToLocal(network)) //Connect to the node
+{
+    node.VersionHandshake(); //Say hello
+                             //Advertize your transaction (send just the hash)
+    node.SendMessage(new InvPayload(InventoryType.MSG_TX, transaction.GetHash()));
+    //Send it
+    node.SendMessage(new TxPayload(transaction));
+    Thread.Sleep(500); //Wait a bit
+}
+```
+
 ### What I'm doing:
 * Create a new testnet BosStrat $BOSS
 * Open Swagger
