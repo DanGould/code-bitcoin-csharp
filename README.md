@@ -3,7 +3,7 @@
 #### Writing directly to chain
 
 
-## Background
+### Background
 This workshop is designed for anyone with limited technical background. Your hand will be held through
 * hosting your own lite node
 * validating the blockchain
@@ -11,7 +11,42 @@ This workshop is designed for anyone with limited technical background. Your han
 * mining
 Our ultimate goal is to team with partners and write a 2-of-3 multisignature transaction. We will discuss the scenarios where such a transaction and others may benefit organizations' financing
 
-## What I'm doing:
+Huge thanks to everyone who contributed to [Programming the Blockchain in C#](https://github.com/ProgrammingBlockchain/ProgrammingBlockchain). Much of this workshop comes from that text.
+
+# Let's get started
+
+If you want to use .NET Core, first install .NET Core [as documented here](https://www.microsoft.com/net/core#windowsvs2017).
+
+Then:
+```
+mkdir MyProject
+cd MyProject
+dotnet new console
+dotnet add package NBitcoin
+dotnet restore
+```
+Then edit your Program.cs:
+```
+using System;
+using NBitcoin;
+
+namespace _125350929
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Console.WriteLine("Hello World! " + new Key().GetWif(Network.Main));
+        }
+    }
+}
+```
+You can then run with
+```
+dotnet run
+```
+
+### What I'm doing:
 * Create a new testnet BosStrat $BOSS
 * Open Swagger
 	1. GET:api/mnemonic
@@ -24,7 +59,7 @@ Our ultimate goal is to team with partners and write a 2-of-3 multisignature tra
 ## Prequisites
 * Ubuntu, MacOS, Windows machine. Other OS: YMMV
 
-.NET Core SDK 2.1
+.NET Core SDK 2.1 https://www.microsoft.com/net/learn/dotnet/hello-world-tutorial#windowsvs2017
 
 SBFN - AzureMaster
 * Running BosStrat network | port: 16777 | RPC: 16888
@@ -61,3 +96,8 @@ We're at Tufts. I really doubt we will be able to get long work going but I may 
 
 Sat Nov  3 23:30:50 2018
 Just realize I need to get rid of Checkpoints because otherwise we can't get valid blocks. Still not sure how to generate Genesis....
+
+
+Sun Nov  4 00:21:46 2018
+Refuled - updated network rules by replacing timestamp, removing checkpoints, null assumeDefault
+
