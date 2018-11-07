@@ -5,10 +5,9 @@
 
 ### Background
 This workshop is designed for anyone with limited technical background. Your hand will be held through
-* hosting your own lite node
-* validating the blockchain
 * writing custom transactions
 * mining
+* validating the blockchain
 Our ultimate goal is to team with partners and write a 2-of-3 multisignature transaction. We will discuss the scenarios where such a transaction and others may benefit organizations' financing
 
 Huge thanks to everyone who contributed to [Programming the Blockchain in C#](https://github.com/ProgrammingBlockchain/ProgrammingBlockchain). Much of this workshop comes from that text.
@@ -28,7 +27,7 @@ mkdir MyProject
 cd MyProject
 dotnet new console
 dotnet add package NBitcoin
-dan$ dotnet restore
+dotnet restore
 ```
 
 Then edit Program.cs:
@@ -42,7 +41,9 @@ namespace
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World! " + new Key().GetWif(Network.TestNet));
+	    Network network = Network.TestNet;
+	    var master = new Key()
+            Console.WriteLine("Hello Bitcoin World! " +  master.GetWif(network));
         }
     }
 }
@@ -51,27 +52,189 @@ Run it in console:
 ```console
 dotnet run
 ```
+Great! This program creates a new Bitcoin secret key ("sk") on our the defined network. **Write it down**. We'll need this in the next step
+
+We're going to need to record that key so we it can sign for coins. Replace the master & console lines to match the following:
+
+```cs
+static void Main(string[] args)
+{
+    Network network = Network.TestNet;
+    // Insert your own secret from the last step here. This is our master sk
+    var master = new BitcoinSecret("cPaLw36GPtbfiq5rrEWsQLFn1oatdDmj8VRonnveEbFDctVAg5iy");
+    Console.WriteLine("BitcoinSecret: " + master.GetWif(network));
+    // I like big bits and I cannot lie
+    Console.WriteLine("Address: " + master.GetAddress(network));
+}
+```
+>❔: If you run this program, is the WalletInputFormat sk logged the same?
+
+# Load up this "wallet" ₿🤑
+
+> ‼️ : The following parts of this guide include live transactions on the bitcoin network. If you send funds to the wrong place, you will have to backtrack. **Don't run the program unless you understand where funds are going. Ask for help 🆘**
+
+Copy down your newly found address. Enter it on [this bitcoin faucet]("https://coinfaucet.eu/en/btc-testnet/") to get free bits for testing. Probably around0.005TBTC depending on the day. [backup faucet]("http://bitcoinfaucet.uo1.net/")
+
+Search your **receive address** or **transactionId** (txId) on a [block explorer]("https://testnet.smartbit.com.au/") to view the tx network status.
+Now we're going to need some network connectivity.
+
+> Who has a bitcoin node installed on their machine?
+
+Add `QBitNinja.Client` to your project:
+```console
+dotnet add package QBitNinja.Client
+```
+reference this package in `Program.cs` and use it'
+```cs
+using QBitNinja.Client
+// ...
+// ... Append to your `Program.cs` `main`
+var client = QBitNinjaClient(network);
+
+// replace "0acb..." with the txId from the block explorer
+var transactionId = uint256.Parse("0acb6e97b228b838049ffbd528571c5e3edd003f0ca8ef61940166dc3081b78a");
+var transactionResponse = client.GetTransaction(transactionId).Result;
+
+Console.WriteLine(transactionResponse.TransactionId); // 0acb6e97b228b838049ffbd528571c5e3edd003f0ca8ef61940166dc3081b78a
+Console.WriteLine(transactionResponse.Block.Confirmations); // 91
+```
+
+# Now send 'em!
+
+### From where?
+
+Let's see which output of our transaction we can spend.
+>❔: What does it mean to "spend" cryptocurrency
+
+
+```cs
+var receivedCoins = transactionResponse.ReceivedCoins;
+OutPoint outPointToSpend = null;
+foreach (var coin in receivedCoins)
+{
+    if (c.TxOut.ScriptPubKey == master.ScriptPubKey)
+    {
+        outPointToSpend = c.Outpoint;
+    }
+}
+if (outPointToSpend == null)
+	throw new Exception("TxOut doesn't contain any our ScriptPubKey");
+Console.WriteLine("We want to spend outpoint #{0}", outPointToSpend.N + 1);
+```
+
+Probably the second outPoint. This is the most regular transaction. We're designing this.
+
+```cs
+var tx = Transaction.Create(network);
+tx.Inputs.Add(new TxIn()
+{
+    PrevOut = outPointToSpend
+});
+```
+
+# To who?
+Let's set up some 朋友s. We need friends to send to. Remember how we did this before?
+
+```cs
+var alice = new Key()
+var bob = new Key()
+Console.WriteLine("alice: " + alice.GetWif(network));
+Console.WriteLine("bob: " +  bob.GetWif(network));
+```
+
+```console
+dotnet run
+```
+Like before, save this output and replace the old variables **With your own sk"
+
+```cs
+var alice = new BitcoinSecret("cW2ZL5hQsYMgC9yuZycY8FsSht7WuVwfqT4XNEiAzskHrwVDKUuY")
+var bob = new BitcoinSecret("cUfgszwWKyCah2SVe6Xik4pRgLDQKiZmnNAaJRL6WQfStokQAYLQ")
+```
+
+```cs toBob = new TxOut()
+{
+    Value = new Money(0.01m, MoneyUnit.BTC),
+    ScriptPubKey = bobPrivateKey.ScriptPubKey
+};
+
+var toAlice = new TxOut()
+{
+    Value = new Money(0.01m, MoneyUnit.BTC),
+    ScriptPubKey = alicePrivateKey.ScriptPubKey
+};
+
+transaction.Outputs.Add(toAlice);
+transaction.Outputs.Add(toBob);
+```
+
+> ‼️: We could sign & broadcast this transaction now. What's missing? What's the problem?
+
+We must calculate the change output
+```cs
+var minerFee = new Money(0.0002m, MoneyUnit.BTC);
+var txInAmount = (Money)receivedCoins[(int)outPointToSpend.N].Amount;
+var changeAmount = txInAmount - toBob.Value - toAlice.Value - minerFee;
+
+var change = new TxOut()
+{
+    Value = changeAmount,
+    ScriptPubKey = master.ScriptPubKey
+};
+
+// The first time I tried this I forgot to use a change output and paid the entirety of my main balance to the miners. Whoops
+transaction.Outputs.Add(change);
+```
+
+# Signing our transaction
+
+```cs
+transaction.Inputs[0].ScriptSig = master.ScriptPubKey;
+transaction.Sign(master, receivedCoins.ToArray())
+``` ``` 
+
+# Broadcast it
+
+Finally, let's send it to bitcoin nodes and get it in the blockchain
+
+```cs
+var broadcastResponse = client.Broadcast(tx).Result;
+if (!broadcastResponse.Success)
+{
+    Console.Error.WriteLine("ErrorCode: " + broadcastResponse.Error.ErrorCode);
+    Console.Error.WriteLine("Error message: " + broadcastResponse.Error.Reason);
+}
+else
+{
+    Console.WriteLine("Success! You can check out the hash of the transaciton in any block explorer:");
+    Console.WriteLine(transaction.GetHash());
+}
+```
+
+```console
+dotnet run
+```
+
+Congrats! Bask in your newfound glory 🥳🎉. You just deployed raw Bitcoin Script to the blockchain. It will be there forever!
+
+>‼️ : At this point, assuming Success, coin is spent. set `broadcastResponse = null` or comment how the last block of code we wrote. We can't double-spend in bitcoin. If we could it would be worthless. Running this again will send more money from master to Alice and Bob
 
 # Writing a Multisig Transaction
-Bitcoin allows us to have shared ownership and control over coins with multi-signature transactions or multisig for short. 
+Bitcoin allows us to have shared ownership over coins with multi-signature transactions or multisig for short. These, and the transactions you wrote before are simple smart-contracts.
 
-In order to demonstrate this we will create a ```ScriptPubKey``` that represents an **m-of-n multisig**. This means that in order to spend the coins, **m** number of private keys will be needed to sign the spending transaction out of the **n** number of different public keys provided.
+In order to demonstrate this shared ownership we will create a ```ScriptPubKey``` that represents an **m-of-n multisig**. This means that in order to spend the coins, **m** number of private keys will be needed to sign the spending transaction out of the **n** number of different public keys provided.
 
-Let’s create a multi-sig with Bob, Alice and Satoshi, where 2 of the 3 of them need to sign a transaction in order to spend a coin.  
+Let’s create a multi-sig tx with Bob, Alice and our master, where 2 of the 3 of them need to sign a transaction in order to spend a coin.  
 
 At the top:
 ```cs
-using System.Linq
+using System.Linq;
 
-...
-
-Key bob = new Key();
-Key alice = new Key();
-Key satoshi = new Key();
+// ... After what we wrote
 
 var scriptPubKey = PayToMultiSigTemplate
     .Instance
-    .GenerateScriptPubKey(2, new[] { bob.PubKey, alice.PubKey, satoshi.PubKey });
+    .GenerateScriptPubKey(2, new[] { bob.PubKey, alice.PubKey, master.PubKey });
 
 Console.WriteLine(scriptPubKey);
 ```  
