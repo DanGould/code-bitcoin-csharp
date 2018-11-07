@@ -43,8 +43,8 @@ namespace
         static void Main(string[] args)
         {
 	    Network network = Network.TestNet;
-	    var master = new Key()
-            Console.WriteLine("Hello Bitcoin World! " +  master.GetWif(network));
+	    var treasurer = new Key()
+            Console.WriteLine("Hello Bitcoin World! " +  treasurer.GetWif(network));
         }
     }
 }
@@ -55,17 +55,17 @@ dotnet run
 ```
 Great! This program creates a new Bitcoin secret key ("sk") on our the defined network. **Write it down**. We'll need this in the next step
 
-We're going to need to record that key so we it can sign for coins. Replace the master & console lines to match the following:
+We're going to need to record that key so we it can sign for coins. Replace the treasurer & `Console` lines to match the following:
 
 ```cs
 static void Main(string[] args)
 {
     Network network = Network.TestNet;
-    // Insert your own secret from the last step here. This is our master sk
-    var master = new BitcoinSecret("cPaLw36GPtbfiq5rrEWsQLFn1oatdDmj8VRonnveEbFDctVAg5iy");
-    Console.WriteLine("BitcoinSecret: " + master.GetWif(network));
+    // Insert your own secret from the last step here. This is the treasurer's sk
+    var treasurer = new BitcoinSecret("cPaLw36GPtbfiq5rrEWsQLFn1oatdDmj8VRonnveEbFDctVAg5iy");
+    Console.WriteLine("BitcoinSecret: " + treasurer.GetWif(network));
     // I like big bits and I cannot lie
-    Console.WriteLine("Address: " + master.GetAddress(network));
+    Console.WriteLine("Address: " + treasurer.GetAddress(network));
 }
 ```
 >❔: If you run this program, is the WalletInputFormat sk logged the same?
@@ -111,9 +111,9 @@ Let's see which output of our transaction we can spend.
 ```cs
 var receivedCoins = transactionResponse.ReceivedCoins;
 OutPoint outPointToSpend = null;
-foreach (var coin in receivedCoins)
+foreach (var c in receivedCoins)
 {
-    if (c.TxOut.ScriptPubKey == master.ScriptPubKey)
+    if (c.TxOut.ScriptPubKey == treasurer.ScriptPubKey)
     {
         outPointToSpend = c.Outpoint;
     }
@@ -171,6 +171,8 @@ transaction.Outputs.Add(toBob);
 
 > ‼️: We could sign & broadcast this transaction now. What's missing? What's the problem?
 
+![](../assets/doh.png)  
+
 We must calculate the change output
 ```cs
 var minerFee = new Money(0.0002m, MoneyUnit.BTC);
@@ -180,7 +182,7 @@ var changeAmount = txInAmount - toBob.Value - toAlice.Value - minerFee;
 var change = new TxOut()
 {
     Value = changeAmount,
-    ScriptPubKey = master.ScriptPubKey
+    ScriptPubKey = treasurer.ScriptPubKey
 };
 
 // The first time I tried this I forgot to use a change output and paid the entirety of my main balance to the miners. Whoops
@@ -190,8 +192,8 @@ transaction.Outputs.Add(change);
 # Signing our transaction
 
 ```cs
-transaction.Inputs[0].ScriptSig = master.ScriptPubKey;
-transaction.Sign(master, receivedCoins.ToArray())
+transaction.Inputs[0].ScriptSig = treasurer.ScriptPubKey;
+transaction.Sign(treasurer, receivedCoins.ToArray())
 ``` ``` 
 
 # Broadcast it
@@ -218,14 +220,14 @@ dotnet run
 
 Congrats! Bask in your newfound glory 🥳🎉. You just deployed raw Bitcoin Script to the blockchain. It will be there forever!
 
->‼️ : At this point, assuming Success, coin is spent. set `broadcastResponse = null` or comment how the last block of code we wrote. We can't double-spend in bitcoin. If we could it would be worthless. Running this again will send more money from master to Alice and Bob
+>‼️ : At this point, assuming Success, coin is spent. set `broadcastResponse = null` or comment how the last block of code we wrote. We can't double-spend in bitcoin. If we could it would be worthless. Running this again will send more money from the treasurer to Alice and Bob
 
 # Writing a Multisig Transaction
 Bitcoin allows us to have shared ownership over coins with multi-signature transactions or multisig for short. These, and the transactions you wrote before are simple smart-contracts.
 
 In order to demonstrate this shared ownership we will create a ```ScriptPubKey``` that represents an **m-of-n multisig**. This means that in order to spend the coins, **m** number of private keys will be needed to sign the spending transaction out of the **n** number of different public keys provided.
 
-Let’s create a multi-sig tx with Bob, Alice and our master, where 2 of the 3 of them need to sign a transaction in order to spend a coin.  
+Let’s create a multi-sig tx with Bob, Alice and our treasurer, where 2 of the 3 of them need to sign a transaction in order to spend a coin.  
 
 At the top:
 ```cs
@@ -235,7 +237,7 @@ using System.Linq;
 
 var scriptPubKey = PayToMultiSigTemplate
     .Instance
-    .GenerateScriptPubKey(2, new[] { bob.PubKey, alice.PubKey, master.PubKey });
+    .GenerateScriptPubKey(2, new[] { bob.PubKey, alice.PubKey, treasurer.PubKey });
 
 Console.WriteLine(scriptPubKey);
 ```  
@@ -253,11 +255,11 @@ Later we will talk more deeply about the subject but for now let’s use the ```
 Imagine the multisig ```scriptPubKey``` received a coin in a transaction called ```received```:
 
 ```cs
-var received = Transaction.Create(Network.TestNet)
+var received = Transaction.Create(network)
 received.Outputs.Add(new TxOut(Money.Coins(1.0m), scriptPubKey));
 ```  
 
-Bob and Alice agree to pay Nico 1.0 TBTC for his services.
+Bob and Alice agree to pay Nico 0.005 TBTC for his services.
 First they get the ```Coin``` they received from the transaction:  
 
 ```cs
@@ -269,12 +271,12 @@ Coin coin = received.Outputs.AsCoins().First();
 Then, with the ```TransactionBuilder```, they create an **unsigned transaction**.  
 
 ```cs
-BitcoinAddress nico = new Key().PubKey.GetAddress(Network.TestNet);
-TransactionBuilder builder = Network.TestNet.CreateTransactionBuilder();
+BitcoinAddress nico = new Key().PubKey.GetAddress(network);
+TransactionBuilder builder = network.CreateTransactionBuilder();
 Transaction unsigned = 
     builder
       .AddCoins(coin)
-      .Send(nico, Money.Coins(1.0m))
+      .Send(nico, Money.Coins(0.005m))
       .BuildTransaction(sign: false);
 ```  
 
@@ -342,38 +344,6 @@ Console.WriteLine(fullySigned);
 ```
 Before sending the transaction to the network, examine the CombineSignatures() type annotation: compare the two transactions 'bobSigned' and 'fullySigned' thoroughly. It will seem like they are identical. It seems like the CombineSignatures() method is needless in this case because the transaction got signed properly without the CombineSignatures() method.
 
-Let's look at a case where CombineSignatures() is required:
-```cs
-TransactionBuilder builderNew = Network.TestNet.CreateTransactionBuilder()
-TransactionBuilder builderForAlice = Network.TestNet.CreateTransactionBuilder()
-TransactionBuilder builderForBob = Network.TestNet.CreateTransactionBuilder()
-
-Transaction unsignedNew =
-                builderNew
-                    .AddCoins(coin)
-                    .Send(nico, Money.Coins(1.0m))
-                    .BuildTransaction(sign: false);
-
-            
-            Transaction aliceSigned =
-                builderForAlice
-                    .AddCoins(coin)
-                    .AddKeys(alice)
-                    .SignTransaction(unsignedNew);
-            
-            Transaction bobSigned =
-                builderForBob
-                    .AddCoins(coin)
-                    .AddKeys(bob)
-                    .SignTransaction(unsignedNew);
-					
-//In this case, the CombineSignatures() method is essentially needed.
-Transaction fullySigned =
-                builderNew
-                    .AddCoins(coin)
-                    .CombineSignatures(aliceSigned, bobSigned);
-```
-
 The transaction is now ready to be sent to the network, but notice that the CombineSignatures() method was critical here, because both the aliceSigned and the bobSigned transactions were only partially signed, therefore not acceptable by the network. CombineSignatures() combined the two partially signed transactions into one fully signed transaction.  
 
 > Sidenote: there is an inherent difficulty which arises from this situation. You need to send the newly created, unsigned multi-sig transaction to every signer and after their signed it, you also need to collect the partially signed transactions from them and combine them into one, so that you can publish that on the network. This problem is partially solved by the [BIP-0174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki), because it at least standardizes the data format, but you still need to implement your own way to distribute the data between the signing parties.  
@@ -393,7 +363,7 @@ Remember writing `scriptPubKey`? Let's write a paymentScript instead:
 ```cs
 var paymentScript = PayToMultiSigTemplate
     .Instance
-    .GenerateScriptPubKey(2, new[] { bob.PubKey, alice.PubKey, satoshi.PubKey }).PaymentScript;
+    .GenerateScriptPubKey(2, new[] { bob.PubKey, alice.PubKey, treasurer.PubKey }).PaymentScript;
 
 Console.WriteLine(paymentScript);
 ```
@@ -404,8 +374,28 @@ OP_HASH160 57b4162e00341af0ffc5d5fab468d738b3234190 OP_EQUAL
 
 The output hash represents the hash of the previous multi-sig script (containing `OP_CHECKMULTISIG`)
 
-From this point we should probably build
+Since it's a hash, we can easily convert it to a base58 bitcoin address
 
+```cs
+Script redeemScript = PayToMultiSigTemplate
+    .Instance
+    .GenerateScriptPubKey(2, new[] { bob.PubKey, alice.PubKey, treasurer.PubKey }).PaymentScript;
+
+Console.WriteLine(redeemScript.Hash.GetAddress(network);
+```
+
+Let's pay this multi-sig script
+```cs
+Transaction received = Transaction.Create(network)
+//Pay to the script hash
+received.Outputs.Add(new TxOut(Money.Coins(0.005m), redeemScript.Hash));
+```
+
+Instead of creating a `Coin`, because this asset is shared, we have to create a `ScriptCoin`
+```cs
+ScriptCoin coin = received.Outputs.AsCoins().First()
+    .ToScriptCoin(redeemScript);
+```
 
 ### What I'm doing:
 * Create a new testnet BosStrat $BOSS
