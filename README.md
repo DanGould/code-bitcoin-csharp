@@ -17,6 +17,7 @@ Huge thanks to everyone who contributed to [Programming the Blockchain in C#](ht
 Who's familiar with `Terminal`? 
 
 [Install .NET Core as documented here](https://www.microsoft.com/net/core#windowsvs2017).
+
 [Install VSCode](https://code.visualstudio.com/download), or use Visual Studio, or your favorite text editor
 
 # Create a new project
@@ -69,13 +70,13 @@ static void Main(string[] args)
 ```
 >❔: If you run this program, is the WalletInputFormat sk logged the same?
 
-# Load up this "wallet" ₿🤑
+# Load up this "wallet" 🤑
 
-> ‼️ : The following parts of this guide include live transactions on the bitcoin network. If you send funds to the wrong place, you will have to backtrack. **Don't run the program unless you understand where funds are going. Ask for help 🆘**
+> ‼️ : The following parts of this guide include live transactions on the bitcoin network. If you send funds to the wrong place, you will have to backtrack. **Don't run the program unless you understand where funds are going.** Ask for help.
 
-Copy down your newly found address. Enter it on [this bitcoin faucet]("https://coinfaucet.eu/en/btc-testnet/") to get free bits for testing. Probably around0.005TBTC depending on the day. [backup faucet]("http://bitcoinfaucet.uo1.net/")
+Copy down your newly found address. Enter it on [this bitcoin faucet](https://coinfaucet.eu/en/btc-testnet/) to get free bits for testing. Probably around 0.005TBTC depending on the day. [backup faucet](http://bitcoinfaucet.uo1.net/)
 
-Search your **receive address** or **transactionId** (txId) on a [block explorer]("https://testnet.smartbit.com.au/") to view the tx network status.
+Search your **receive address** or **transactionId** (txId) on a [block explorer](https://testnet.smartbit.com.au/) to view the tx network status.
 Now we're going to need some network connectivity.
 
 > Who has a bitcoin node installed on their machine?
