@@ -19,6 +19,7 @@ Who's familiar with `Terminal`?
 [Install .NET Core as documented here](https://www.microsoft.com/net/core#windowsvs2017).
 
 [Install VSCode](https://code.visualstudio.com/download), or use Visual Studio, or your favorite text editor
+If you choose to use another editor, I highly recommned you use code completion or IDE features like [omnisharp for sublime](https://github.com/OmniSharp/omnisharp-sublime). Without it, it's going to be easy to make mistakes
 
 # Create a new project
 
@@ -33,6 +34,8 @@ dotnet restore
 
 Then edit Program.cs:
 ```cs
+// Program.cs
+
 using System;
 using NBitcoin;
 
@@ -43,7 +46,7 @@ namespace
         static void Main(string[] args)
         {
 	    Network network = Network.TestNet;
-	    var treasurer = new Key()
+	    var treasurer = new Key();
             Console.WriteLine("Hello Bitcoin World! " +  treasurer.GetWif(network));
         }
     }
@@ -55,20 +58,32 @@ dotnet run
 ```
 Great! This program creates a new Bitcoin secret key ("sk") on our the defined network. **Write it down**. We'll need this in the next step
 
+```
+// Keys.txt
+
+sk: cPaLw36GPtbfiq5rrEWsQLFn1oatdDmj8VRonnveEbFDctVAg5iy
+address: mi9KunGhzEkN7cRy8dzA3XMhQw1tgt5xAC
+```
+
 We're going to need to record that key so we it can sign for coins. Replace the treasurer & `Console` lines to match the following:
 
 ```cs
 static void Main(string[] args)
 {
     Network network = Network.TestNet;
-    // Insert your own secret from the last step here. This is the treasurer's sk
+    // Replace the key constructor with your own secret from the last step here. This is the treasurer's sk
     var treasurer = new BitcoinSecret("cPaLw36GPtbfiq5rrEWsQLFn1oatdDmj8VRonnveEbFDctVAg5iy");
-    Console.WriteLine("BitcoinSecret: " + treasurer.GetWif(network));
+    Console.WriteLine("BitcoinSecret: " + treasurer.PrivateKey.GetWif(network)); // TODO
     // I like big bits and I cannot lie
-    Console.WriteLine("Address: " + treasurer.GetAddress(network));
+    Console.WriteLine("Address: " + treasurer.GetAddress());
 }
 ```
->❔: If you run this program, is the WalletInputFormat sk logged the same?
+
+```console
+dotnet run
+```
+
+>❔: When you run this program, is the WalletInputFormat sk logged the same?
 
 # Load up this "wallet" 🤑
 
@@ -85,14 +100,16 @@ Add `QBitNinja.Client` to your project:
 ```console
 dotnet add package QBitNinja.Client
 ```
-reference this package in `Program.cs` and use it'
+reference this package at the top of `Program.cs` and use it'
 ```cs
 using QBitNinja.Client
 // ...
 // ... Append to your `Program.cs` `main`
-var client = QBitNinjaClient(network);
+var client = new QBitNinjaClient(network);
 
 // replace "0acb..." with the txId from the block explorer
+// If the faucet doesn't work, look up the address on the explorer. If no tx, try another faucet
+
 var transactionId = uint256.Parse("0acb6e97b228b838049ffbd528571c5e3edd003f0ca8ef61940166dc3081b78a");
 var transactionResponse = client.GetTransaction(transactionId).Result;
 
@@ -126,6 +143,10 @@ Console.WriteLine("We want to spend outpoint #{0}", outPointToSpend.N + 1);
 Probably the second outPoint. This is the most regular transaction. We're designing this.
 
 ```cs
+// Program.cs
+
+// ... After what we have already in main
+
 var tx = Transaction.Create(network);
 tx.Inputs.Add(new TxIn()
 {
@@ -137,32 +158,47 @@ tx.Inputs.Add(new TxIn()
 Let's set up some 朋友s. We need friends to send to. Remember how we did this before?
 
 ```cs
-var alice = new Key()
-var bob = new Key()
+// Program.cs (cont.)
+
+var alice = new Key();
+var bob = new Key();
 Console.WriteLine("alice: " + alice.GetWif(network));
 Console.WriteLine("bob: " +  bob.GetWif(network));
 ```
-
 ```console
 dotnet run
 ```
+
+Note the addresses
+```
+// notes.txt
+
+sk: cPaLw36GPtbfiq5rrEWsQLFn1oatdDmj8VRonnveEbFDctVAg5iy
+ad: mi9KunGhzEkN7cRy8dzA3XMhQw1tgt5xAC
+
+Alice sk: cW2ZL5hQsYMgC9yuZycY8FsSht7WuVwfqT4XNEiAzskHrwVDKUuY
+bob sk: cUfgszwWKyCah2SVe6Xik4pRgLDQKiZmnNAaJRL6WQfStokQAYLQ
+```
+
+
 Like before, save this output and replace the old variables **With your own sk"
 
 ```cs
-var alice = new BitcoinSecret("cW2ZL5hQsYMgC9yuZycY8FsSht7WuVwfqT4XNEiAzskHrwVDKUuY")
-var bob = new BitcoinSecret("cUfgszwWKyCah2SVe6Xik4pRgLDQKiZmnNAaJRL6WQfStokQAYLQ")
+var alice = new BitcoinSecret("cW2ZL5hQsYMgC9yuZycY8FsSht7WuVwfqT4XNEiAzskHrwVDKUuY");
+var bob = new BitcoinSecret("cUfgszwWKyCah2SVe6Xik4pRgLDQKiZmnNAaJRL6WQfStokQAYLQ");
 ```
 
-```cs toBob = new TxOut()
-{
-    Value = new Money(0.01m, MoneyUnit.BTC),
-    ScriptPubKey = bobPrivateKey.ScriptPubKey
-};
-
+```cs
 var toAlice = new TxOut()
 {
-    Value = new Money(0.01m, MoneyUnit.BTC),
-    ScriptPubKey = alicePrivateKey.ScriptPubKey
+    Value = new Money(0.00m, MoneyUnit.BTC),
+    ScriptPubKey = alice.ScriptPubKey
+};
+
+var toBob = new TxOut()
+{
+    Value = new Money(0.001m, MoneyUnit.BTC),
+    ScriptPubKey = bob.ScriptPubKey
 };
 
 transaction.Outputs.Add(toAlice);
@@ -192,15 +228,19 @@ transaction.Outputs.Add(change);
 # Signing our transaction
 
 ```cs
+// Program.cs (cont.)
+
 transaction.Inputs[0].ScriptSig = treasurer.ScriptPubKey;
 transaction.Sign(treasurer, receivedCoins.ToArray())
-``` ``` 
+```
 
 # Broadcast it
 
 Finally, let's send it to bitcoin nodes and get it in the blockchain
 
 ```cs
+// Program.cs (cont.)
+
 var broadcastResponse = client.Broadcast(tx).Result;
 if (!broadcastResponse.Success)
 {
