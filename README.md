@@ -108,11 +108,7 @@ Let’s create a multi-sig contract where two of the three Bob, Alice and our tr
 
 ```cs
 // Program.cs
-
-// With the other using statements:
-using System.Linq;
-
-// ... Continued Main method:
+// Continued Main method:
 
 var scriptPubKey = PayToMultiSigTemplate
     .Instance
@@ -147,7 +143,8 @@ This PubKey Script (scriptPubKey) we logged, though valid, doesn't look very muc
 
 var redeemScript = PayToMultiSigTemplate
     .Instance
-    .GenerateScriptPubKey(2, new[] { bob.PubKey, alice.PubKey, treasurer.PubKey }).PaymentScript;
+    .GenerateScriptPubKey(2, new[] { bob.PubKey, alice.PubKey, treasurer.PubKey })
+    .PaymentScript;
 
 Console.WriteLine("redeemScript: "+ redeemScript);
 ```
@@ -169,16 +166,16 @@ Since it's a hash, we can easily convert it to a base58 bitcoin address with the
 ```cs
 // Program.cs (cont.)
 
-Console.WriteLine(redeemScript.Hash.GetAddress(network));
+Console.WriteLine("multi-sig address:" + redeemScript.Hash.GetAddress(network));
 ```
 
-> **Note**: Details are important. We pay to the `redeemScript.Hash` not the `redeemScript
+> **Note**: Details are important. We pay to the `redeemScript.Hash` not the `redeemScript`. We want [P2SH](https://bitcoin.org/en/glossary/p2sh-address) not [P2PK[H]](https://bitcoin.org/en/glossary/p2pkh-address)
 
 Excellent! Now we can load it up the same we would our FullNode wallet
 
 # Give the script value 🤑
 
-> ‼️ : The following parts of this guide include live transactions on the bitcoin network. If you send funds to the wrong place, you will have to backtrack. **Don't run the program unless you understand where funds are going.** Fret not; ask for help.
+> ‼️ : The following parts of this guide include live transactions on the bitcoin network. If you send funds to the wrong place, they're gone forever. **Don't run the program unless you understand what it's doing.** Fret not; ask for help.
 
 ```console
 dotnet run
@@ -187,6 +184,8 @@ dotnet run
 Copy down your new `redeemScript.Hash` address. Enter it into this [bitcoin faucet](https://coinfaucet.eu/en/btc-testnet/) to get free coin for testing. If that's down here's the [backup faucet](http://bitcoinfaucet.uo1.net/)
 
 Search the same **receive address** (`redeemScript.Hash` address) or **transactionId** (txId) on a [block explorer](https://testnet.smartbit.com.au/) to view the tx network status.
+
+![](./assets/FaucetTxId.png)
 
 We're going to need some network connectivity to get funds out from now cold storage.
 
@@ -200,8 +199,9 @@ dotnet add package QBitNinja.Client
 reference this nifty node-as-a-service at the top of `Program.cs`
 ```cs
 // Program.cs
+// ... after the other `using` statements
 
-using QBitNinja.Client
+using QBitNinja.Client;
 
 // ...
 // Append to your `Program.cs` Main method
@@ -217,7 +217,8 @@ var receiveTransactionId = uint256.Parse("0acb6e97b228b838049ffbd528571c5e3edd00
 var receiveTransactionResponse = client.GetTransaction(receiveTransactionId).Result;
 
 Console.WriteLine(receiveTransactionResponse.TransactionId);
-Console.WriteLine(receiveTransactionResponse.Block.Confirmations); 
+// if this fails, it's ok. It hasn't been confirmed in a block yet. Proceed
+Console.WriteLine(receiveTransactionResponse.Block.Confirmations);
 ```
 
 # Making a Payment 💸
@@ -236,12 +237,17 @@ Let's see which output of our transaction we can spend.
 
 var receivedCoins = receiveTransactionResponse.ReceivedCoins;
 OutPoint outpointToSpend = null;
+ScriptCoin coinToSpend = null;
 foreach (var c in receivedCoins)
 {
-    if (c.TxOut.ScriptPubKey == redeemScript)
+    try
     {
+        // If we can make a ScriptCoin out of our redeemScript
+        // we "own" this outpoint
+        ScriptCoin coinToSpend = new ScriptCoin(c, redeemScript);
         outpointToSpend = c.Outpoint;
     }
+    catch {}
 }
 if (outpointToSpend == null)
 	throw new Exception("TxOut doesn't contain any our ScriptPubKey");
@@ -250,7 +256,7 @@ Console.WriteLine("We want to spend outpoint #{0}", outpointToSpend.N + 1);
 var sendTransaction = Transaction.Create(network);
 sendTransaction.Inputs.Add(new TxIn()
 {
-    PrevOut = outPointToSpend
+    PrevOut = outpointToSpend
 });
 ```
 
@@ -261,7 +267,7 @@ We already know Lucas's address is `mv4rnyY3Su5gjcDNzbMLKBQkBicCtHUtFB`
 ```cs
 // Program.cs (cont.)
 
-var lucasAddress = new BitcoinAddress("mv4rnyY3Su5gjcDNzbMLKBQkBicCtHUtFB", network);
+var lucasAddress = BitcoinAddress.Create("mv4rnyY3Su5gjcDNzbMLKBQkBicCtHUtFB", network);
 
 ```
 
@@ -270,7 +276,7 @@ var lucasAddress = new BitcoinAddress("mv4rnyY3Su5gjcDNzbMLKBQkBicCtHUtFB", netw
 
 Typically we'd add a change output but lucas deserves all our bit wealth
 
-# Signing our transaction
+# Signing the contract 🖋️
 
 We need 2 of 3. Even if the treasurer doesn't approve, Alice & Bob'll have their way.
 
@@ -278,8 +284,8 @@ We need 2 of 3. Even if the treasurer doesn't approve, Alice & Bob'll have their
 // Program.cs (cont.)
 
 TransactionBuilder builder = network.CreateTransactionBuilder();
-var minerFee = new Money(0.0007m, MoneyUnit.BTC);
-
+var minerFee = new Money(0.0002m, MoneyUnit.BTC);
+var txInAmount = (Money)receivedCoins[(int)outpointToSpend.N].Amount;
 ```
 
 > In practice, we would use a FullNode to estimate the miner fee. Since [we're rich](https://www.youtube.com/watch?v=rdkEUBmVJrc) we don't care.
@@ -289,14 +295,15 @@ var minerFee = new Money(0.0007m, MoneyUnit.BTC);
 
 Transaction unsigned =
     builder
-        .AddCoins(outpointToSpend)
-	.Send(lucas, outpointToSpend.Value - minerFee)
+        .AddCoins(coinToSpend)
+	.Send(lucasAddress, txInAmount - minerFee)
+	.SetChange(lucasAddress, ChangeType.Uncolored)
 	.BuildTransaction(sign: false);
 
 // Alice signs it
 Transaction aliceSigned = 
     builder
-        .AddCoins(outpointToSpend)
+        .AddCoins(coinToSpend)
         .AddKeys(alice)
         .SignTransaction(unsigned);
 
@@ -309,9 +316,9 @@ Transaction aliceSigned =
 // Gotta get Bob's approval too
 Transaction bobSigned =
     builder
-        .AddCoins(outpointToSpend)
+        .AddCoins(coinToSpend)
 	.AddKeys(bob)
-	.SignTransaction(aliceSigned)
+	.SignTransaction(aliceSigned);
 ```
 
 ![](./assets/bobSigned.png)  
@@ -323,7 +330,7 @@ Now, Bob and Alice can combine their signatures into one transaction. This trans
 
 Transaction fullySigned =
     builder
-        .AddCoins(coin)
+        .AddCoins(coinToSpend)
         .CombineSignatures(aliceSigned, bobSigned);
 
 Console.WriteLine(fullySigned);
