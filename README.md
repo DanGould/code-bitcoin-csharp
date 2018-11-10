@@ -13,10 +13,10 @@ Huge thanks to everyone who contributed to [Programming the Blockchain in C#](ht
 
 # Let's get started
 
-[Install .NET Core as documented here](https://www.microsoft.com/net/core#windowsvs2017).
+1) [Install .NET Core as documented here](https://www.microsoft.com/net/core#windowsvs2017).
 
-[Install VSCode](https://code.visualstudio.com/download), or use Visual Studio, or your favorite text editor.
-If you choose to use another editor, I highly recommned you use code completion or IDE features like [omnisharp for sublime](https://github.com/OmniSharp/omnisharp-sublime). Without it, it's going to be easy to make mistakes
+2) [Install VSCode](https://code.visualstudio.com/download), or use Visual Studio, or your favorite text editor.
+3) Install the [C# Extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.csharp) or other plugin for your editor like [omnisharp for sublime](https://github.com/OmniSharp/omnisharp-sublime). Without one making mistakes will be too easy.
 
 **I highly recommend you type all of the commands and code rather than copy + paste. You'll more quickly get a feel for the library and be able to figure out where your mistakes are.**
 
@@ -69,15 +69,12 @@ This program generates a 3 bitcoin secret keys (sk). Open a new file and **write
 // Keys.txt
 
 // Just example keys. Yours will of course be actual base58 encoded WIF keys.
-
-T sk: <treasurer base58 key>
-
-A sk: <Alice base58 key>
-
-B sk: <Bob base58 key>
+treasurer key: <cSMW1AvuqDX5NG3Gy4ktxx1yBWEKGU5r3p6NbXuCK6LkjtH12FLe>
+Alice     key: <cSWyMTFYWBVjv7tzvpj1rQgMUwccs5yGgi9ZiHzP978nohWEDH9w>
+Bob       key: <cUWedW9rd7HnsTdks1HDwUTTWRDsMvHz2kY6dbv5pH4jgHU1pN9H>
 ```
 
-We're going to need to record that key so we it can sign for coins. Substitute your keys **These keys won't work for you**. Replace your existing Main method with the following:
+Substitute your keys **These keys won't work for you**. Replace your existing Main method with the following:
 
 ```cs
 // Program.cs (Main method snipet)
@@ -271,10 +268,7 @@ var lucasAddress = new BitcoinAddress("mv4rnyY3Su5gjcDNzbMLKBQkBicCtHUtFB", netw
 
 > ‼️: We could sign & broadcast this transaction now. What's missing? Do we have a problem?
 
-![](./assets/doh.png)  
-
 Typically we'd add a change output but lucas deserves all our bit wealth
-// The first time I tried this I forgot to use a change output and paid the entirety of my main balance to the miners. Whoops
 
 # Signing our transaction
 
