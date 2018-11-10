@@ -9,7 +9,7 @@ This workshop is designed for anyone with limited technical background. Your han
 * broadcasting it to blockchain
 Our ultimate goal is to team with partners and write a 2-of-3 multisignature transaction. We will discuss the scenarios where such a transaction and others may benefit organizations' financing
 
-Huge thanks to everyone who contributed to [Programming the Blockchain in C#](https://github.com/ProgrammingBlockchain/ProgrammingBlockchain). Much of this workshop comes from that text.
+Huge thanks to everyone who contributed to [Programming the Blockchain in C#](https://github.com/ProgrammingBlockchain/ProgrammingBlockchain). Much of this workshop draws from that text.
 
 # Let's get started
 
@@ -271,7 +271,7 @@ var lucasAddress = new BitcoinAddress("mv4rnyY3Su5gjcDNzbMLKBQkBicCtHUtFB", netw
 
 > ‼️: We could sign & broadcast this transaction now. What's missing? Do we have a problem?
 
-![](../assets/doh.png)  
+![](./assets/doh.png)  
 
 Typically we'd add a change output but lucas deserves all our bit wealth
 // The first time I tried this I forgot to use a change output and paid the entirety of my main balance to the miners. Whoops
@@ -307,7 +307,7 @@ Transaction aliceSigned =
         .SignTransaction(unsigned);
 
 ```
-![](../assets/aliceSigned.png)  
+![](./assets/aliceSigned.png)  
 
 ```cs
 // Program.cs (cont.)
@@ -320,7 +320,7 @@ Transaction bobSigned =
 	.SignTransaction(aliceSigned)
 ```
 
-![](../assets/bobSigned.png)  
+![](./assets/bobSigned.png)  
 
 Now, Bob and Alice can combine their signatures into one transaction. This transaction will then be valid, because two signatures were used from the three (Bob, Alice and Satoshi) original signatures that were initially provided. The requirements of the 'two-of-three' multisig have therefore been met. If this wasn't the case, the network would not accept this transaction, because the nodes reject all unsigned or partially signed transactions.
 
@@ -335,7 +335,7 @@ Transaction fullySigned =
 Console.WriteLine(fullySigned);
 ```  
 
-![](../assets/fullySigned.png)  
+![](./assets/fullySigned.png)  
 
 Run it:
 ```console
