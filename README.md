@@ -136,7 +136,7 @@ As you can see, the ```scriptPubkey``` has the following form: ```<sigsRequired>
 
 # P2SH 2-of-3 Transaction
 
-This PubKey Script (scriptPubKey) we logged, though valid, doesn't look very much like a wallet-friendly address. We will run it through a function so a sender we use it like any other address.
+This PubKey Script (scriptPubKey) we logged, though valid, doesn't look very much like a wallet-friendly address. We will run it through a function so a sender can use it like any other address.
 
 ```cs
 // Program.cs (cont.)
@@ -252,12 +252,6 @@ foreach (var c in receivedCoins)
 if (outpointToSpend == null)
 	throw new Exception("TxOut doesn't contain any our ScriptPubKey");
 Console.WriteLine("We want to spend outpoint #{0}", outpointToSpend.N + 1);
-
-var sendTransaction = Transaction.Create(network);
-sendTransaction.Inputs.Add(new TxIn()
-{
-    PrevOut = outpointToSpend
-});
 ```
 
 ### To who?
@@ -285,6 +279,7 @@ We need 2 of 3. Even if the treasurer doesn't approve, Alice & Bob'll have their
 
 TransactionBuilder builder = network.CreateTransactionBuilder();
 var minerFee = new Money(0.0002m, MoneyUnit.BTC);
+var sendAmount = txInAmount - minerFee;
 var txInAmount = (Money)receivedCoins[(int)outpointToSpend.N].Amount;
 ```
 
@@ -296,7 +291,7 @@ var txInAmount = (Money)receivedCoins[(int)outpointToSpend.N].Amount;
 Transaction unsigned =
     builder
         .AddCoins(coinToSpend)
-	.Send(lucasAddress, txInAmount - minerFee)
+	.Send(lucasAddress, sendAmount)
 	.SetChange(lucasAddress, ChangeType.Uncolored)
 	.BuildTransaction(sign: false);
 
@@ -375,7 +370,7 @@ Finally, let's send it to bitcoin nodes and get it in the blockchain
 ```cs
 // Program.cs (cont.)
 
-var broadcastResponse = client.Broadcast(sendTransaction).Result;
+var broadcastResponse = client.Broadcast(fullySigned).Result;
 if (!broadcastResponse.Success)
 {
     Console.Error.WriteLine("ErrorCode: " + broadcastResponse.Error.ErrorCode);
@@ -384,7 +379,7 @@ if (!broadcastResponse.Success)
 else
 {
     Console.WriteLine("Success! You can check out the hash of the transaciton in any block explorer:");
-    Console.WriteLine(sendTransaction.GetHash());
+    Console.WriteLine(fulySigned.GetHash());
 }
 ```
 
