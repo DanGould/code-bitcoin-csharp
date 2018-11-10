@@ -9,7 +9,7 @@ This workshop is designed for anyone with limited technical background. Your han
 * broadcasting it to blockchain
 Our ultimate goal is to team with partners and write a 2-of-3 multisignature transaction. We will discuss the scenarios where such a transaction and others may benefit organizations' financing
 
-Huge thanks to everyone who contributed to [Programming the Blockchain in C#](https://github.com/ProgrammingBlockchain/ProgrammingBlockchain). Much of this workshop draws from that text.
+Huge thanks to @NicolasDorier, @nopara73, and everyone else who contributed to [Programming the Blockchain in C#](https://github.com/ProgrammingBlockchain/ProgrammingBlockchain). Much of this workshop draws from that text and the NBitcoin library Nicolas wrote which it details
 
 # Let's get started
 
@@ -87,9 +87,9 @@ static void Main(string[] args)
     var alice = new BitcoinSecret("cPaLw36GPtbfiq5rrEWsQLFn1oatdDmj8VRonnveEbFDctVAg5iy");
     var bob = new BitcoinSecret("cPaLw36GPtbfiq5rrEWsQLFn1oatdDmj8VRonnveEbFDctVAg5iy");
 
-    Console.WriteLine("treasurer key: " + treasurer.GetWif(network));
-    Console.WriteLine("Alice     key: " + alice.GetWif(network));
-    Console.WriteLine("Bob       key: " + bob.GetWif(network));
+    Console.WriteLine("treasurer key: " + treasurer.PrivateKey.GetWif(network));
+    Console.WriteLine("Alice     key: " + alice.PrivateKey.GetWif(network));
+    Console.WriteLine("Bob       key: " + bob.PrivateKey.GetWif(network));
 }
 ```
 
