@@ -80,7 +80,7 @@ B sk: cPaLw36GPtbfiq5rrEWsQLFn1oatdDmj8VRonnveEbFDctqAg5iy
 We're going to need to record that key so we it can sign for coins. Replace your existing Main method with the following. Substitute your keys **These keys won't work for you**.
 
 ```cs
-// Program.cs
+// Program.cs (Main method snipet)
 
 static void Main(string[] args)
 {
@@ -122,7 +122,7 @@ var scriptPubKey = PayToMultiSigTemplate
     .Instance
     .GenerateScriptPubKey(2, new[] { bob.PubKey, alice.PubKey, treasurer.PubKey });
 
-Console.WriteLine(scriptPubKey);
+Console.WriteLine("PubKey script: " + scriptPubKey);
 ```  
 
 Run it:
@@ -135,22 +135,25 @@ The program now generates this script which you can use as a public key (coin de
 2 0282213c7172e9dff8a852b436a957c1f55aa1a947f2571585870bfb12c0c15d61 036e9f73ca6929dec6926d8e319506cc4370914cd13d300e83fd9c3dfca3970efb 0324b9185ec3db2f209b620657ce0e9a792472d89911e0ac3fc1e5b5fc2ca7683d 3 OP_CHECKMULTISIG
 ```  
 
-As you can see, the ```scriptPubkey``` has the following form: ```<sigsRequired> <pubkeys…> <pubKeysCount> OP_CHECKMULTISIG```  
+As you can see, the ```scriptPubkey``` has the following form: ```<sigsRequired> <pubKeys…> <pubKeysCount> OP_CHECKMULTISIG```  
 
-[scriptPubKey](https://bitcoin.org/en/glossary/pubkey-script) is a Tx output which specifies conditions that must be satisfied in order to spend the value of the output. In this multi-sig transaction, we require 2-of-3 specified pubkeys to sign as condition to spend. 
+> [scriptPubKey](https://bitcoin.org/en/glossary/pubkey-script) is a Tx output which specifies conditions that must be satisfied in order to spend the value of the output. In this multi-sig transaction, we require 2-of-3 specified pubkeys to sign as condition to spend. 
+
+### Notable Example [🔗](https://en.bitcoin.it/wiki/Multisignature#Notable_examples_in_practice)
+>The cold storage wallet of the Bitfinex exchange is a single 3-of-6 multisig address `3D2oetdNuZUqQHPJmcMDDHYoqkyNVsFk9r` which as of November 2018 over [₿1,943,295](https://www.blockchain.com/btc/address/3D2oetdNuZUqQHPJmcMDDHYoqkyNVsFk9r) has flowed through ($12.3 billion). Presumably the keys are kept very safe by Bitfinex's operators. 
 
 # P2SH 2-of-3 Transaction
 
-This PubKey Script (scriptPubKey), though valid, doesn't look very much like a typical wallet-friendly base58 address. Luckily, we can run it through a function so your wallet can't tell it apart from any other transaction.
+This PubKey Script (scriptPubKey) we logged, though valid, doesn't look very much like a typical wallet-friendly address. Luckily, we can run it through a function so a sender we use it like any other address.
 
 ```cs
 // Program.cs (cont.)
 
-var paymentScript = PayToMultiSigTemplate
+var redeemScript = PayToMultiSigTemplate
     .Instance
     .GenerateScriptPubKey(2, new[] { bob.PubKey, alice.PubKey, treasurer.PubKey }).PaymentScript;
 
-Console.WriteLine(paymentScript);
+Console.WriteLine("redeemScript: "+ redeemScript);
 ```
 
 Run it:
@@ -173,44 +176,23 @@ Since it's a hash, we can easily convert it to a base58 bitcoin address with the
 Console.WriteLine(paymentScript.Hash.GetAddress(network);
 ```
 
-Excellent! Now we can load it up the same we would any wallet.
+> **Note**: Details are important. We pay to the `redeemScript.Hash` not the `redeemScript
 
----------------------------------
+Excellent! Now we can load it up the same we would in wallet.
 
-The process for signing it (in order to be able to spend it) is a thus little more complicated than just calling ```Transaction.Sign```.
+# Give the script value! 🤑
 
-Later we will talk more deeply about the subject but for now let’s use the ```TransactionBuilder``` to sign the transaction.
+> ‼️ : The following parts of this guide include live transactions on the bitcoin network. If you send funds to the wrong place, you will have to backtrack. **Don't run the program unless you understand where funds are going.** Fret not; ask for help.
 
-Imagine the multisig ```scriptPubKey``` received a coin in a transaction called ```received```:
+Copy down your new `redeemScript.Hash` address. Enter it on [this bitcoin faucet](https://coinfaucet.eu/en/btc-testnet/) to get free coin for testing. Probably around 0.005TBTC depending on traffic.
+[backup faucet](http://bitcoinfaucet.uo1.net/)
 
-```cs
-// Program.cs (cont.)
+Search the same **receive address** (`redeemScript.Hash` address) or **transactionId** (txId) on a [block explorer](https://testnet.smartbit.com.au/) to view the tx network status.
 
-var received = Transaction.Create(network)
-received.Outputs.Add(new TxOut(Money.Coins(1.0m), scriptPubKey));
-```  
+Now we're going to need some network connectivity to get funds out
 
-Bob and Alice agree to pay Nico 0.005 TBTC for his services.
-First they get the ```Coin``` they received from the transaction:  
-
-```cs
-Coin coin = received.Outputs.AsCoins().First();
-```  
-
-![](../assets/coin.png)  
-
-
-
-# Load up this "wallet" 🤑
-
-> ‼️ : The following parts of this guide include live transactions on the bitcoin network. If you send funds to the wrong place, you will have to backtrack. **Don't run the program unless you understand where funds are going.** Ask for help.
-
-Copy down your newly found address. Enter it on [this bitcoin faucet](https://coinfaucet.eu/en/btc-testnet/) to get free bits for testing. Probably around 0.005TBTC depending on the day. [backup faucet](http://bitcoinfaucet.uo1.net/)
-
-Search your **receive address** or **transactionId** (txId) on a [block explorer](https://testnet.smartbit.com.au/) to view the tx network status.
-Now we're going to need some network connectivity.
-
-> Who has a bitcoin node installed on their machine?
+# Become a Node (or a leech)
+> Who has a bitcoin node on them?[send from your own node](https://programmingblockchain.gitbook.io/programmingblockchain/bitcoin_transfer/spend_your_coin#with-your-own-bitcoin-core)
 
 Add `QBitNinja.Client` to your project:
 ```console
@@ -218,35 +200,43 @@ dotnet add package QBitNinja.Client
 ```
 reference this package at the top of `Program.cs` and use it'
 ```cs
+// Program.cs
+
 using QBitNinja.Client
+
 // ...
-// ... Append to your `Program.cs` `main`
+// Append to your `Program.cs` Main method
+// ...
+
 var client = new QBitNinjaClient(network);
 
-// replace "0acb..." with the txId from the block explorer
-// If the faucet doesn't work, look up the address on the explorer. If no tx, try another faucet
+// replace "0acb..." with the txId from the block explorer from the faucet.
+// If the faucet doesn't work, look up the redeemScript.Hash address on the explorer. You will find a txId related to that address. If no tx appears, try another faucet.
 
-var transactionId = uint256.Parse("0acb6e97b228b838049ffbd528571c5e3edd003f0ca8ef61940166dc3081b78a");
-var transactionResponse = client.GetTransaction(transactionId).Result;
+var receiveTransactionId = uint256.Parse("0acb6e97b228b838049ffbd528571c5e3edd003f0ca8ef61940166dc3081b78a");
+var receiveTransactionResponse = client.GetTransaction(receiveTransactionId).Result;
 
-Console.WriteLine(transactionResponse.TransactionId); // 0acb6e97b228b838049ffbd528571c5e3edd003f0ca8ef61940166dc3081b78a
-Console.WriteLine(transactionResponse.Block.Confirmations); // 91
+Console.WriteLine(receiveTransactionResponse.TransactionId);  // prints the txId
+Console.WriteLine(receiveTransactionResponse.Block.Confirmations); // How many blocks in the chain agree your transaction is in the longest chain (probably 1 rn)
 ```
 
-# Now send 'em!
+# Making a Payment 💸 (新飛錢）
+
+Because our funds are locked in a 2-of-3 contract it (in order to be able to spend it) is a thus little more complicated than just calling ```Transaction.Sign```.
+
+Later we will talk more deeply about the subject but for now let’s use the ```TransactionBuilder``` to sign the transaction.
 
 ### From where?
 
 Let's see which output of our transaction we can spend.
->❔: What does it mean to "spend" cryptocurrency
-
+>❔: What does it mean to "spend" cryptocurrency?
 
 ```cs
-var receivedCoins = transactionResponse.ReceivedCoins;
+var receivedCoins = receiveTransactionResponse.ReceivedCoins;
 OutPoint outPointToSpend = null;
 foreach (var c in receivedCoins)
 {
-    if (c.TxOut.ScriptPubKey == treasurer.ScriptPubKey)
+    if (c.TxOut.ScriptPubKey == redeemScript)
     {
         outPointToSpend = c.Outpoint;
     }
@@ -254,101 +244,125 @@ foreach (var c in receivedCoins)
 if (outPointToSpend == null)
 	throw new Exception("TxOut doesn't contain any our ScriptPubKey");
 Console.WriteLine("We want to spend outpoint #{0}", outPointToSpend.N + 1);
-```
 
-Probably the second outPoint. This is the most regular transaction. We're designing this.
-
-```cs
-// Program.cs
-
-// ... After what we have already in main
-
-var tx = Transaction.Create(network);
-tx.Inputs.Add(new TxIn()
+var sendTransaction = Transaction.Create(network);
+sendTransaction.Inputs.Add(new TxIn()
 {
     PrevOut = outPointToSpend
 });
 ```
 
 # To who?
-Let's set up some 朋友s. We need friends to send to. Remember how we did this before?
+We already know Lucas's address is `mv4rnyY3Su5gjcDNzbMLKBQkBicCtHUtFB`
+
 
 ```cs
 // Program.cs (cont.)
 
-var alice = new Key();
-var bob = new Key();
-Console.WriteLine("alice: " + alice.GetWif(network));
-Console.WriteLine("bob: " +  bob.GetWif(network));
+var lucasAddress = new BitcoinAddress("mv4rnyY3Su5gjcDNzbMLKBQkBicCtHUtFB", network);
+
 ```
+
+
+> ‼️: We could sign & broadcast this transaction now. What's missing? Do we have a problem?
+
+![](../assets/doh.png)  
+
+Typically we'd add a change output but lucas deserves all our bit wealth
+// The first time I tried this I forgot to use a change output and paid the entirety of my main balance to the miners. Whoops
+
+# Signing our transaction
+
+We need 2 of 3. Even if the treasurer doesn't approve, Alice & Bob'll have their way.
+
+```cs
+// Program.cs (cont.)
+
+TransactionBuilder builder = network.CreateTransactionBuilder();
+var minerFee = new Money(0.0007m, MoneyUnit.BTC);
+
+```
+
+> In practice, we would use a FullNode to estimate the miner fee. Since [we're rich](https://www.youtube.com/watch?v=rdkEUBmVJrc) we don't care.
+
+```cs
+// Program.cs (cont.)
+Transaction unsigned =
+    builder
+        .AddCoins(outpointToSpend)
+	.Send(lucas, outpointToSpend.Value - minerFee)
+	.BuildTransaction(sign: false);
+
+// Alice signs it
+Transaction aliceSigned = 
+    builder
+        .AddCoins(outpointToSpend)
+        .AddKeys(alice)
+        .SignTransaction(unsigned);
+
+```
+![](../assets/aliceSigned.png)  
+
+```
+// Program.cs (cont.)
+
+// Gotta get Bob's approval too
+Transaction bobSigned =
+    builder
+        .AddCoins(outpointToSpend)
+	.AddKeys(bob)
+	.SignTransaction(aliceSigned)
+```
+
+![](../assets/bobSigned.png)  
+
+Now, Bob and Alice can combine their signatures into one transaction. This transaction will then be valid, because two (Bob and Alice) signatures were used from the three (Bob, Alice and Satoshi) signatures that were initially provided. The requirements of the 'two-of-three' multisig have therefore been met. If this wasn't the case, the network would not accept this transaction, because the nodes reject all unsigned or partially signed transactions.
+
+```cs
+// Program.cs (cont.)
+
+Transaction fullySigned =
+    builder
+        .AddCoins(coin)
+        .CombineSignatures(aliceSigned, bobSigned);
+
+Console.WriteLine(fullySigned);
+```  
+
+![](../assets/fullySigned.png)  
+
+Run it:
 ```console
 dotnet run
 ```
 
-Note the addresses
-```
-// notes.txt
-
-sk: cPaLw36GPtbfiq5rrEWsQLFn1oatdDmj8VRonnveEbFDctVAg5iy
-ad: mi9KunGhzEkN7cRy8dzA3XMhQw1tgt5xAC
-
-Alice sk: cW2ZL5hQsYMgC9yuZycY8FsSht7WuVwfqT4XNEiAzskHrwVDKUuY
-bob sk: cUfgszwWKyCah2SVe6Xik4pRgLDQKiZmnNAaJRL6WQfStokQAYLQ
-```
-
-
-Like before, save this output and replace the old variables **With your own sk"
-
-```cs
-var alice = new BitcoinSecret("cW2ZL5hQsYMgC9yuZycY8FsSht7WuVwfqT4XNEiAzskHrwVDKUuY");
-var bob = new BitcoinSecret("cUfgszwWKyCah2SVe6Xik4pRgLDQKiZmnNAaJRL6WQfStokQAYLQ");
-```
-
-```cs
-var toAlice = new TxOut()
+Output:
+```json
 {
-    Value = new Money(0.00m, MoneyUnit.BTC),
-    ScriptPubKey = alice.ScriptPubKey
-};
+  ...
+  "in": [
+    {
+      "prev_out": {
+        "hash": "9df1e011984305b78210229a86b6ade9546dc69c4d25a6bee472ee7d62ea3c16",
+        "n": 0
+      },
+      "scriptSig": "0 3045022100a14d47c762fe7c04b4382f736c5de0b038b8de92649987bc59bca83ea307b1a202203e38dcc9b0b7f0556a5138fd316cd28639243f05f5ca1afc254b883482ddb91f01 3044022044c9f6818078887587cac126c3c2047b6e5425758e67df64e8d682dfbe373a2902204ae7fda6ada9b7a11c4e362a0389b1bf90abc1f3488fe21041a4f7f14f1d856201"
+    }
+  ],
+  "out": [
+    {
+      "value": "1.00000000",
+      "scriptPubKey": "OP_DUP OP_HASH160 d4a0f6c5b4bcbf2f5830eabed3daa7304fb794d6 OP_EQUALVERIFY OP_CHECKSIG"
+    }
+  ]
+}
 
-var toBob = new TxOut()
-{
-    Value = new Money(0.001m, MoneyUnit.BTC),
-    ScriptPubKey = bob.ScriptPubKey
-};
-
-transaction.Outputs.Add(toAlice);
-transaction.Outputs.Add(toBob);
 ```
 
-> ‼️: We could sign & broadcast this transaction now. What's missing? What's the problem?
+Before sending the transaction to the network, examine the CombineSignatures() type annotation: compare the two transactions 'bobSigned' and 'fullySigned' thoroughly. It will seem like they are identical. It seems like the CombineSignatures() method is needless in this case because the transaction got signed properly without the CombineSignatures() method.
 
-![](../assets/doh.png)  
+The transaction is now ready to be sent to the network, but notice that the CombineSignatures() method was critical here, because both the aliceSigned and the bobSigned transactions were only partially signed, therefore not acceptable by the network. CombineSignatures() combined the two partially signed transactions into one fully signed transaction.  
 
-We must calculate the change output
-```cs
-var minerFee = new Money(0.0002m, MoneyUnit.BTC);
-var txInAmount = (Money)receivedCoins[(int)outPointToSpend.N].Amount;
-var changeAmount = txInAmount - toBob.Value - toAlice.Value - minerFee;
-
-var change = new TxOut()
-{
-    Value = changeAmount,
-    ScriptPubKey = treasurer.ScriptPubKey
-};
-
-// The first time I tried this I forgot to use a change output and paid the entirety of my main balance to the miners. Whoops
-transaction.Outputs.Add(change);
-```
-
-# Signing our transaction
-
-```cs
-// Program.cs (cont.)
-
-transaction.Inputs[0].ScriptSig = treasurer.ScriptPubKey;
-transaction.Sign(treasurer, receivedCoins.ToArray())
-```
 
 # Broadcast it
 
