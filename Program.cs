@@ -77,22 +77,18 @@ namespace StratisProject
                 throw new Exception("TxOut doesn't contain any our ScriptPubKey");
             Console.WriteLine("We want to spend outpoint #{0}", outpointToSpend.N + 1);
 
-            var sendTransaction = Transaction.Create(network);
-            sendTransaction.Inputs.Add(new TxIn()
-            {
-                PrevOut = outpointToSpend
-            });
-
             var lucasAddress = BitcoinAddress.Create("mv4rnyY3Su5gjcDNzbMLKBQkBicCtHUtFB", network);
 
             TransactionBuilder builder = network.CreateTransactionBuilder();
 
-            var minerFee = new Money(0.0002m, MoneyUnit.BTC);
+            var minerFee = new Money(0.0005m, MoneyUnit.BTC);
             var txInAmount = (Money)receivedCoins[(int)outpointToSpend.N].Amount;
+            var sendAmount = txInAmount - minerFee;
+
             Transaction unsigned =
                 builder
                     .AddCoins(coinToSpend)
-                    .Send(lucasAddress, txInAmount - minerFee)
+                    .Send(lucasAddress, sendAmount)
                     .SetChange(lucasAddress, ChangeType.Uncolored)
                     .BuildTransaction(sign: false);
 
@@ -116,7 +112,7 @@ namespace StratisProject
 
             Console.WriteLine(fullySigned);
 
-            var broadcastResponse = client.Broadcast(sendTransaction).Result;
+            var broadcastResponse = client.Broadcast(fullySigned).Result;
             if (!broadcastResponse.Success)
             {
                 Console.Error.WriteLine("ErrorCode: " + broadcastResponse.Error.ErrorCode);
@@ -125,7 +121,7 @@ namespace StratisProject
             else
             {
                 Console.WriteLine("Success! You can check out the hash of the transaciton in any block explorer:");
-                Console.WriteLine(sendTransaction.GetHash());
+                Console.WriteLine(fullySigned.GetHash());
             }
         }
     }
