@@ -1,5 +1,4 @@
-﻿// Program.cs
-
+﻿
 using System;
 using NBitcoin;
 using QBitNinja.Client;
@@ -14,10 +13,8 @@ namespace StratisProject
 
             /*
             Console.WriteLine("treasurer key: " +  treasurer.GetWif(network));
-
             var alice = new Key();
             var bob = new Key();
-
             Console.WriteLine("Alice     key: " + alice.GetWif(network));
             Console.WriteLine("Bob       key: " + bob.GetWif(network));
              */
@@ -85,11 +82,13 @@ namespace StratisProject
             var txInAmount = (Money)receivedCoins[(int)outpointToSpend.N].Amount;
             var sendAmount = txInAmount - minerFee;
 
+
             Transaction unsigned =
                 builder
                     .AddCoins(coinToSpend)
                     .Send(lucasAddress, sendAmount)
-                    .SetChange(lucasAddress, ChangeType.Uncolored)
+                    .SendFees(minerFee)
+                    .SetChange(lucasAddress)
                     .BuildTransaction(sign: false);
 
             // Alice signs it

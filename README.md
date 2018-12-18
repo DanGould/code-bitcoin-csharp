@@ -292,7 +292,8 @@ Transaction unsigned =
     builder
         .AddCoins(coinToSpend)
 	.Send(lucasAddress, sendAmount)
-	.SetChange(lucasAddress, ChangeType.Uncolored)
+	.SendFees(minerFee)
+	.SetChange(lucasAddress)
 	.BuildTransaction(sign: false);
 
 // Alice signs it
@@ -379,7 +380,7 @@ if (!broadcastResponse.Success)
 else
 {
     Console.WriteLine("Success! You can check out the hash of the transaciton in any block explorer:");
-    Console.WriteLine(fulySigned.GetHash());
+    Console.WriteLine(fullySigned.GetHash());
 }
 ```
 
